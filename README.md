@@ -6,7 +6,7 @@ Standardize extracted udas/dat files to JADERLINK_DATUDAS_TOOL format
 
 Tool destinada para renomear o nomes dos arquivos da extração do udas/dat que foram extraídos com as tool  do "Son of Persia" e do "MarioKartN64", para ficarem com o mesmo nome da tool JADERLINK_DATUDAS_TOOL.
 
-# JADERLINK_DATUDAS_TOOL.exe
+# DATUDAS_IDX_STANDARDIZE.exe
 Para funcionar, você precisa do arquivo .idx e dos arquivos na pasta associada ao arquivo .idx;
 No console do programa:
 
