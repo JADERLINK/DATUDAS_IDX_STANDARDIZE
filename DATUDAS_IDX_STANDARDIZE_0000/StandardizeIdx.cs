@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 
-namespace DATUDAS_IDX_STANDARDIZE
+namespace DATUDAS_IDX_STANDARDIZE_0000
 {
     public class StandardizeIdx
     {
@@ -17,6 +17,9 @@ namespace DATUDAS_IDX_STANDARDIZE
 
         public StandardizeIdx(FileInfo info, IdxType type)
         {
+            string[] allowedExtensions = new string[] {"SMD", "AEV", "ITA", "ETS", "CAM", "LIT", "EFF", "SAT", "EAT", "EAR", "SAR", "ESE", "FSE", "SMX", "MDT", "EMI", "SHD", "RTP", "ITM", "ETM", "TEX", "CNS", "STB", "OSD", "BLK", "DRA", "DSE"};
+            bool as_SMD_File = false;
+
             string entry_file = "file_";
             char entry_separator = '=';
             string output_file = "File_";
@@ -65,6 +68,37 @@ namespace DATUDAS_IDX_STANDARDIZE
                 idx.Close();
                 //----
 
+                // for para verificar se tem um arquivo SMD
+                foreach (var item in lines)
+                {
+                    string trim = item.SLine.Trim();
+
+                    if (trim.ToLowerInvariant().StartsWith(entry_file)) 
+                    {
+                        var split = trim.Split(new char[] { entry_separator });
+                        if (split.Length >= 2)
+                        {
+                            string vfile = split[1].Trim();
+                            string Extension = "NULL";
+
+                            var vfileSplit = vfile.Split('.');
+                            if (vfileSplit.Length > 1)
+                            {
+                                Extension = vfileSplit.LastOrDefault()?.ToUpperInvariant() ?? "NULL";
+                            }
+
+                            if (Extension == "SMD")
+                            {
+                                as_SMD_File = true;
+                            }
+                        }
+                    }
+                }
+
+                // controle de numeração de arquivo
+                // extension, ultimo valor usado
+                Dictionary<string, uint> filesId = new Dictionary<string, uint>();
+
                 //codigo responsavel por verificar quais linhas são arquivos
                 foreach (var item in lines)
                 {
@@ -99,6 +133,22 @@ namespace DATUDAS_IDX_STANDARDIZE
                                     newName = baseName + "\\" + baseName + "_END." + Extension;
                                 }
 
+                                if (allowedExtensions.Contains(Extension) && as_SMD_File)
+                                {
+                                    uint ID = 0;
+                                    if (filesId.ContainsKey(Extension))
+                                    {
+                                        filesId[Extension]++;
+                                        ID = filesId[Extension];
+                                    }
+                                    else
+                                    {
+                                        filesId.Add(Extension, ID);
+                                    }
+
+                                    newName = baseName + "\\" + ID.ToString("D4") + "." + Extension;
+                                }
+   
                                 item.FileID = ikey;
                                 item.OldFileName = vfile;
                                 item.NewFileName = newName;
@@ -129,6 +179,22 @@ namespace DATUDAS_IDX_STANDARDIZE
                             }
 
                             string newName = baseName + "\\" + baseName + "_END." + Extension;
+
+                            if (allowedExtensions.Contains(Extension) && as_SMD_File)
+                            {
+                                uint ID = 0;
+                                if (filesId.ContainsKey(Extension))
+                                {
+                                    filesId[Extension]++;
+                                    ID = filesId[Extension];
+                                }
+                                else
+                                {
+                                    filesId.Add(Extension, ID);
+                                }
+
+                                newName = baseName + "\\" + ID.ToString("D4") + "." + Extension;
+                            }
 
                             item.FileID = -1;
                             item.OldFileName = vfile;

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 
-namespace DATUDAS_IDX_STANDARDIZE
+namespace DATUDAS_IDX_TO_IDXJ
 {
     class Program
     {
@@ -14,7 +14,7 @@ namespace DATUDAS_IDX_STANDARDIZE
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.BackgroundColor = ConsoleColor.Black;
 
-            Console.WriteLine("# DATUDAS_IDX_STANDARDIZE");
+            Console.WriteLine("# DATUDAS_IDX_TO_IDXJ");
             Console.WriteLine("# By: JADERLINK");
             Console.WriteLine("# VERSION 1.0.2 (2024-08-03)");
             Console.WriteLine("# youtube.com/@JADERLINK");
@@ -48,7 +48,7 @@ namespace DATUDAS_IDX_STANDARDIZE
                     {
                         try
                         {
-                            _ = new StandardizeIdx(info, StandardizeIdx.IdxType.Idx);
+                            _ = new Convert(info, Convert.IdxType.Idx);
                         }
                         catch (Exception ex)
                         {
@@ -59,7 +59,7 @@ namespace DATUDAS_IDX_STANDARDIZE
                     {
                         try
                         {
-                            _ = new StandardizeIdx(info, StandardizeIdx.IdxType.IdxJ);
+                            _ = new Convert(info, Convert.IdxType.IdxJ);
                         }
                         catch (Exception ex)
                         {
@@ -81,7 +81,6 @@ namespace DATUDAS_IDX_STANDARDIZE
 
             Console.WriteLine("Finished!!!");
             Console.WriteLine("");
-
         }
     }
 }
