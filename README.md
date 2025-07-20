@@ -6,9 +6,15 @@ Standardize extracted udas/dat files to JADERLINK_DATUDAS_TOOL format
 
 Tool destinada para renomear o nomes dos arquivos da extração do udas/dat que foram extraídos com as tool  do "Son of Persia" e do "MarioKartN64", para ficarem com o mesmo nome da tool JADERLINK_DATUDAS_TOOL.
 
+**Update V.1.0.3**
+<br>Feito melhorias no código;
+<br>Adicionado suporte ao arquivo idxbig;
+<br>Adicionado suporte ao Linux via mono e seu sistema de diretório;
+
 ## DATUDAS_IDX_STANDARDIZE.exe
 Para funcionar, você precisa do arquivo .idx e dos arquivos na pasta associada ao arquivo .idx;
-No console do programa:
+<br>Também funciona para os arquivos .idxJ e .idxbig;
+<br>No console do programa:
 
 * O que aparecer em branco é texto do próprio programa.
 * O que aparecer em verde é o texto do .idx que não foi mudado.
@@ -27,4 +33,4 @@ Cria um arquivo .idxj a partir de um arquivo .idx, e faz o inverso também.
 Para carregar os cenários no Re4Quad com os novos nomes, baixe o arquivo "RE4QuadNewAge_0000_Scenario_Patch.zip", extraia e coloque a pasta "date" ao lado do executável.
 
 **At.te: JADERLINK**
-<br>2024-08-03
+<br>2025-07-20

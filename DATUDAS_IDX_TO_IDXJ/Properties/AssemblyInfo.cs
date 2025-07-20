@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("DATUDAS_IDX_TO_IDXJ")]
 [assembly: AssemblyDescription("DATUDAS_IDX_TO_IDXJ")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("DATUDAS_IDX_TO_IDXJ")]
+[assembly: AssemblyCompany("JADERLINK")]
 [assembly: AssemblyProduct("DATUDAS_IDX_TO_IDXJ")]
-[assembly: AssemblyCopyright("Copyright ©JADERLINK 2024")]
+[assembly: AssemblyCopyright("Copyright ©JADERLINK 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

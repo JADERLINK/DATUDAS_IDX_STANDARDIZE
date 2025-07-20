@@ -7,7 +7,7 @@ using System.IO;
 
 namespace DATUDAS_IDX_STANDARDIZE_0000
 {
-    public class StandardizeIdx
+    public class StandardizeIdx_0000
     {
         public enum IdxType
         {
@@ -15,7 +15,7 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
             IdxJ
         }
 
-        public StandardizeIdx(FileInfo info, IdxType type)
+        public StandardizeIdx_0000(FileInfo info, IdxType type)
         {
             string[] allowedExtensions = new string[] {"SMD", "AEV", "ITA", "ETS", "CAM", "LIT", "EFF", "SAT", "EAT", "EAR", "SAR", "ESE", "FSE", "SMX", "MDT", "EMI", "SHD", "RTP", "ITM", "ETM", "TEX", "CNS", "STB", "OSD", "BLK", "DRA", "DSE"};
             bool as_SMD_File = false;
@@ -37,8 +37,9 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
 
             string directory = info.DirectoryName;
             string baseName = Path.GetFileNameWithoutExtension(info.Name);
+            string idxFormat = Path.GetExtension(info.Name);
 
-            StreamReader idx = null;
+            StreamReader idx;
 
             try
             {
@@ -47,6 +48,7 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
             catch (Exception ex)
             {
                 Console.WriteLine("Error: " + ex);
+                return;
             }
 
             if (idx != null)
@@ -61,7 +63,7 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                     if (endLine != null)
                     {
                         Line l = new Line();
-                        l.SLine = endLine;
+                        l.SLine = endLine.Trim();
                         lines.Add(l);
                     }
                 }
@@ -78,13 +80,13 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                         var split = trim.Split(new char[] { entry_separator });
                         if (split.Length >= 2)
                         {
-                            string vfile = split[1].Trim();
-                            string Extension = "NULL";
+                            string vfile = split[1].Trim().Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+                            string Extension = "";
 
                             var vfileSplit = vfile.Split('.');
                             if (vfileSplit.Length > 1)
                             {
-                                Extension = vfileSplit.LastOrDefault()?.ToUpperInvariant() ?? "NULL";
+                                Extension = vfileSplit.LastOrDefault()?.ToUpperInvariant() ?? "";
                             }
 
                             if (Extension == "SMD")
@@ -113,13 +115,13 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                             string key = split[0].ToLowerInvariant().Replace(entry_file, "").Trim();
                             if (int.TryParse(key, out ikey))
                             {
-                                string vfile = split[1].Trim();
-                                string Extension = "NULL";
+                                string vfile = split[1].Trim().Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+                                string Extension = "";
 
                                 var vfileSplit = vfile.Split('.');
                                 if (vfileSplit.Length > 1)
                                 {
-                                    Extension = vfileSplit.LastOrDefault()?.ToUpperInvariant() ?? "NULL";
+                                    Extension = vfileSplit.LastOrDefault()?.ToUpperInvariant() ?? "";
                                 }
 
                                 if (Extension == "DAS")
@@ -127,10 +129,15 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                                     Extension = "SND";
                                 }
 
-                                string newName = baseName + "\\" + baseName + "_" + ikey.ToString("D3") + "." + Extension;
+                                string newName = baseName + Path.DirectorySeparatorChar + baseName + "_" + ikey.ToString("D3");
+                                if (Extension.Length > 0)
+                                {
+                                    newName += "." + Extension;
+                                }
+
                                 if (Extension == "SND")
                                 {
-                                    newName = baseName + "\\" + baseName + "_END." + Extension;
+                                    newName = baseName + Path.DirectorySeparatorChar + baseName + "_END." + Extension;
                                 }
 
                                 if (allowedExtensions.Contains(Extension) && as_SMD_File)
@@ -146,7 +153,7 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                                         filesId.Add(Extension, ID);
                                     }
 
-                                    newName = baseName + "\\" + ID.ToString("D4") + "." + Extension;
+                                    newName = baseName + Path.DirectorySeparatorChar + ID.ToString("D4") + "." + Extension;
                                 }
    
                                 item.FileID = ikey;
@@ -165,12 +172,12 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                         if (split.Length >= 2)
                         {
                             string vfile = split[1].Trim();
-                            string Extension = "NULL";
+                            string Extension = "";
 
                             var vfileSplit = vfile.Split('.');
                             if (vfileSplit.Length > 1)
                             {
-                                Extension = vfileSplit.LastOrDefault()?.ToUpperInvariant() ?? "NULL";
+                                Extension = vfileSplit.LastOrDefault()?.ToUpperInvariant() ?? "";
                             }
 
                             if (Extension == "DAS")
@@ -178,7 +185,7 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                                 Extension = "SND";
                             }
 
-                            string newName = baseName + "\\" + baseName + "_END." + Extension;
+                            string newName = baseName + Path.DirectorySeparatorChar + baseName + "_END." + Extension;
 
                             if (allowedExtensions.Contains(Extension) && as_SMD_File)
                             {
@@ -193,10 +200,11 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                                     filesId.Add(Extension, ID);
                                 }
 
-                                newName = baseName + "\\" + ID.ToString("D4") + "." + Extension;
+                                newName = baseName + Path.DirectorySeparatorChar + ID.ToString("D4") + "." + Extension;
                             }
 
                             item.FileID = -1;
+                            item.IsSND = true;
                             item.OldFileName = vfile;
                             item.NewFileName = newName;
                             item.Extension = Extension;
@@ -211,7 +219,7 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                 Console.WriteLine("Renaming and moving files.");
 
                 //codigo por renomear os arquivos, no sistema de arquivo.
-                string newDirectoy = directory + "\\" + baseName;
+                string newDirectoy = directory + Path.DirectorySeparatorChar + baseName;
                 try
                 {
                     Directory.CreateDirectory(newDirectoy);
@@ -221,14 +229,15 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                     Console.WriteLine("Error when creating new directory:");
                     Console.WriteLine(newDirectoy);
                     Console.WriteLine("Message: " + ex.Message);
+                    return;
                 }
                
                 foreach (var item in lines)
                 {
                     if (item.IsFile)
                     {
-                        string oldf = directory + "\\" + item.OldFileName;
-                        string newf = directory + "\\" + item.NewFileName;
+                        string oldf = directory + Path.DirectorySeparatorChar + item.OldFileName;
+                        string newf = directory + Path.DirectorySeparatorChar + item.NewFileName;
 
                         try
                         {
@@ -244,14 +253,7 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                     }
                 }
 
-                if (type == IdxType.IdxJ)
-                {
-                    Console.WriteLine("Creating new .idxj file:");
-                }
-                else
-                {
-                    Console.WriteLine("Creating new .idx file:");
-                }
+                Console.WriteLine($"Creating new {idxFormat} file:");
                 Console.WriteLine();
 
                 StreamWriter idxW = null;
@@ -271,9 +273,9 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
                     {
                         if (item.IsFile && item.FileHasBeenRenamed)
                         {
-                            string newLine = "";
+                            string newLine;
 
-                            if (type == IdxType.IdxJ && item.Extension == "SND")
+                            if (type == IdxType.IdxJ && item.IsSND)
                             {
                                 newLine = "UDAS_END:" + item.NewFileName;
                             }
@@ -308,10 +310,11 @@ namespace DATUDAS_IDX_STANDARDIZE_0000
         {
             public string SLine { get; set; } = "";
             public bool IsFile { get; set; } = false;
+            public bool IsSND { get; set; } = false;
             public int FileID { get; set; } = -1;
             public string OldFileName { get; set; } = "";
             public string NewFileName { get; set; } = "";
-            public string Extension { get; set; } = "NULL";
+            public string Extension { get; set; } = "";
 
             public bool FileHasBeenRenamed { get; set; } = false;
         }

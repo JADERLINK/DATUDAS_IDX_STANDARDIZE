@@ -7,30 +7,11 @@ using System.IO;
 
 namespace DATUDAS_IDX_TO_IDXJ
 {
-    public class Convert
+    public static class Convert
     {
-        public enum IdxType
+        public static void FromIdxToIdxJ(FileInfo info)
         {
-            Idx,
-            IdxJ
-        }
-
-      
-        public Convert(FileInfo info, IdxType type)
-        {
-            if (type == IdxType.IdxJ)
-            {
-                FromIdxjToIdx(info);
-            }
-            else if (type == IdxType.Idx) 
-            {
-                FromIdxToIdxJ(info);
-            }
-        }
-
-        private void FromIdxToIdxJ(FileInfo info)
-        {
-            StreamReader idx = null;
+            StreamReader idx;
 
             try
             {
@@ -42,180 +23,154 @@ namespace DATUDAS_IDX_TO_IDXJ
                 return;
             }
 
-            if (idx != null)
+            // continua só se idx != null
+
+            bool isUdas = false;
+            string FileFormat = "DAT";
+            int SoundFlag = -1;
+            uint FileCount = 0;
+
+            Dictionary<string, string> DatFiles = new Dictionary<string, string>();
+
+            while (!idx.EndOfStream)
             {
+                string line = idx.ReadLine()?.Trim();
 
-                Dictionary<string, string> pair = new Dictionary<string, string>();
-
-                string endLine = "";
-                while (endLine != null)
+                if (!(string.IsNullOrEmpty(line)
+                   || line.StartsWith("#")
+                   || line.StartsWith("\\")
+                   || line.StartsWith("/")
+                   || line.StartsWith(":")
+                   || line.StartsWith("!")
+                ))
                 {
-                    endLine = idx.ReadLine();
-
-                    if (endLine != null)
+                    var split = line.Split(new char[] { '=' });
+                    if (split.Length >= 2)
                     {
-                        endLine = endLine.Trim();
+                        string key = split[0].ToUpperInvariant().Trim();
+                        string value = split[1].Trim().Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 
-                        if (!(endLine.Length == 0
-                            || endLine.StartsWith("#")
-                            || endLine.StartsWith("\\")
-                            || endLine.StartsWith("/")
-                            || endLine.StartsWith(":")
-                            || endLine.StartsWith("!")
-                            ))
+                        if (key.Contains("SOUNDFLAG"))
                         {
-                            var split = endLine.Split(new char[] { '=' });
-                            if (split.Length >= 2)
+                            int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out SoundFlag);
+                            isUdas = true;
+                            FileFormat = "UDAS";
+                            if (SoundFlag == 0)
                             {
-                                string key = split[0].ToUpperInvariant().Trim();
-                                if (!pair.ContainsKey(key))
-                                {
-                                    pair.Add(key, split[1].Trim());
-                                }
+                                SoundFlag = -1;
                             }
                         }
-
-                    }
-
-                }
-
-                idx.Close();
-
-                //SoundFlag
-
-                bool isUdas = false;
-                string FileFormat = "DAT";
-                int SoundFlag = -1;
-                int FileCount = 0;
-
-                if (pair.ContainsKey("SOUNDFLAG"))
-                {
-                    isUdas = true;
-                    FileFormat = "UDAS";
-                    try
-                    {
-                        SoundFlag = int.Parse(pair["SOUNDFLAG"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture);
-                        if (SoundFlag > 0xFF)
+                        else if (key.Contains("FILECOUNT"))
                         {
-                            SoundFlag = 0xFF;
+                            uint.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out FileCount);
+                        }
+                        else if (key.StartsWith("FILE_"))
+                        {
+                            if (!DatFiles.ContainsKey(key))
+                            {
+                                DatFiles.Add(key, value);
+                            }
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("SoundFlag convert error: " + ex);
-                        return;
-                    }
                 }
-
-                //FileCount
-                if (pair.ContainsKey("FILECOUNT"))
-                {
-                    try
-                    {
-                        FileCount = int.Parse(pair["FILECOUNT"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("FileCount convert error: " + ex);
-                        return;
-                    }
-
-                }
-                else
-                {
-                    Console.WriteLine("FileCount does not exist.");
-                    return;
-                }
-
-
-                StreamWriter idxj = null;
-
-                try
-                {
-                    string directory = info.DirectoryName;
-                    string baseName = Path.GetFileNameWithoutExtension(info.Name);
-                    string EndFileName = directory + "\\" + baseName + ".idxJ";
-                    FileInfo EndFileInfo = new FileInfo(EndFileName);
-                    idxj = EndFileInfo.CreateText();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Error: " + ex);
-                    return;
-                }
-
-                if (idxj != null)
-                {
-
-                    int datAmount = FileCount;
-                    if (isUdas && SoundFlag > 0 && datAmount > 0)
-                    {
-                        datAmount -= 1;
-                    }
-
-                    Line[] datGroup = new Line[datAmount];
-
-                    // get files
-                    for (int i = 0; i < datAmount; i++)
-                    {
-                        Line dat = new Line();
-                        dat.FileID = i;
-                        dat.FileName = "";
-                        dat.Extension = "";
-
-                        string key = "FILE_" + i;
-                        if (pair.ContainsKey(key))
-                        {
-                            dat.FileName = pair[key];
-                            dat.Extension = Path.GetExtension(pair[key]);
-                        }
-                        datGroup[i] = dat;
-                    }
-
-                    Line Snd = new Line();
-                    Snd.FileID = -1;
-                    Snd.FileName = "";
-                    Snd.Extension = "";
-
-                    if (isUdas && SoundFlag > 0 && FileCount > 0)
-                    {
-                        string key = "FILE_" + (FileCount - 1);
-                        if (pair.ContainsKey(key))
-                        {
-                            Snd.FileName = pair[key];
-                            Snd.Extension = Path.GetExtension(pair[key]);
-                        }
-                    }
-
-                    // cria novo arquivo dados
-
-                    idxj.WriteLine("# github.com/JADERLINK/JADERLINK_DATUDAS_TOOL");
-                    idxj.WriteLine("# youtube.com/@JADERLINK");
-                    idxj.WriteLine("# JADERLINK DATUDAS TOOL By JADERLINK");
-                    idxj.WriteLine("TOOL_VERSION:V02");
-                    idxj.WriteLine("FILE_FORMAT:" + FileFormat);
-                    idxj.Write("DAT_AMOUNT:" + datAmount);
-                    for (int i = 0; i < datGroup.Length; i++)
-                    {
-                        string Line = "DAT_" + datGroup[i].FileID.ToString("D3") + ":" + datGroup[i].FileName;
-                        idxj.Write(Environment.NewLine + Line);
-                    }
-                    if (isUdas && SoundFlag > 0)
-                    {
-                        idxj.Write(Environment.NewLine + "UDAS_SOUNDFLAG:" + SoundFlag);
-                        idxj.Write(Environment.NewLine + "UDAS_END:" + Snd.FileName);
-                    }
-                    idxj.Close();
-                }
-
 
             }
 
+            idx.Close();
+
+            if (FileCount == 0)
+            {
+                Console.WriteLine("FileCount cannot be 0!");
+                return;
+            }
+
+            StreamWriter idxj;
+
+            try
+            {
+                FileInfo endFileInfo = new FileInfo(Path.ChangeExtension(info.FullName, "idxJ"));
+                idxj = endFileInfo.CreateText();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex);
+                return;
+            }
+
+            // continua só se idxj != null
+
+            uint datAmount = FileCount;
+            if (isUdas && SoundFlag > 0 && datAmount > 0)
+            {
+                datAmount -= 1;
+            }
+
+            Line[] datGroup = new Line[datAmount];
+
+            // get files
+            for (int i = 0; i < datAmount; i++)
+            {
+                Line dat = new Line();
+                dat.FileID = i;
+                dat.FileName = "";
+                dat.Extension = "";
+
+                string key = "FILE_" + i;
+                if (DatFiles.ContainsKey(key))
+                {
+                    dat.FileName = DatFiles[key];
+                    dat.Extension = Path.GetExtension(DatFiles[key]);
+                }
+                datGroup[i] = dat;
+            }
+
+            Line Snd = new Line();
+            Snd.FileID = -1;
+            Snd.FileName = "";
+            Snd.Extension = "";
+
+            if (isUdas && SoundFlag > 0 && FileCount > 0)
+            {
+                string key = "FILE_" + (FileCount - 1);
+                if (DatFiles.ContainsKey(key))
+                {
+                    Snd.FileName = DatFiles[key];
+                    Snd.Extension = Path.GetExtension(DatFiles[key]);
+                }
+            }
+
+            // cria novo arquivo dados
+
+            idxj.WriteLine("# github.com/JADERLINK/JADERLINK_DATUDAS_TOOL");
+            idxj.WriteLine("# youtube.com/@JADERLINK");
+            idxj.WriteLine("# JADERLINK DATUDAS TOOL By JADERLINK");
+            idxj.WriteLine("TOOL_VERSION:V04");
+            idxj.WriteLine("FILE_FORMAT:" + FileFormat);
+            idxj.Write("DAT_AMOUNT:" + datAmount);
+            Console.WriteLine("FILE_FORMAT:" + FileFormat);
+            Console.WriteLine("DAT_AMOUNT:" + datAmount);
+
+            for (int i = 0; i < datGroup.Length; i++)
+            {
+                string line = "DAT_" + datGroup[i].FileID.ToString("D3") + ":" + datGroup[i].FileName;
+                idxj.Write(Environment.NewLine + line);
+                Console.WriteLine(line);
+            }
+            if (isUdas && SoundFlag > 0)
+            {
+                idxj.Write(Environment.NewLine + "UDAS_SOUNDFLAG:" + SoundFlag);
+                idxj.Write(Environment.NewLine + "UDAS_END:" + Snd.FileName);
+
+                Console.WriteLine("UDAS_SOUNDFLAG:" + SoundFlag);
+                Console.WriteLine("UDAS_END:" + Snd.FileName);
+            }
+            idxj.Close();
+
         }
 
-        private void FromIdxjToIdx(FileInfo info) 
+        public static void FromIdxjToIdx(FileInfo info)
         {
-            StreamReader idxj = null;
+            StreamReader idxj;
 
             try
             {
@@ -227,179 +182,158 @@ namespace DATUDAS_IDX_TO_IDXJ
                 return;
             }
 
-            if (idxj != null)
+            // continua só se idxj != null
+
+            string FILE_FORMAT = null;
+            uint DAT_AMOUNT = 0;
+            Dictionary<string, string> DatFiles = new Dictionary<string, string>();
+            int UDAS_SOUNDFLAG = -1;
+            string UDAS_END = null;
+
+            while (!idxj.EndOfStream)
             {
-                Dictionary<string, string> pair = new Dictionary<string, string>();
+                string line = idxj.ReadLine()?.Trim();
 
-                string endLine = "";
-                while (endLine != null)
+                if (!(string.IsNullOrEmpty(line)
+                   || line.StartsWith("#")
+                   || line.StartsWith("\\")
+                   || line.StartsWith("/")
+                   || line.StartsWith(":")
+                   || line.StartsWith("!")
+                   || line.StartsWith("@")
+                ))
                 {
-                    endLine = idxj.ReadLine();
-
-                    if (endLine != null)
+                    var split = line.Split(new char[] { ':' });
+                    if (split.Length >= 2)
                     {
-                        endLine = endLine.Trim();
+                        string key = split[0].ToUpperInvariant().Trim();
+                        string value = split[1].Trim().Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 
-                        if (!(endLine.Length == 0
-                            || endLine.StartsWith("#")
-                            || endLine.StartsWith("\\")
-                            || endLine.StartsWith("/")
-                            || endLine.StartsWith(":")
-                            || endLine.StartsWith("!")
-                            ))
+                        if (key.Contains("FILE_FORMAT"))
                         {
-                            var split = endLine.Split(new char[] { ':' });
-                            if (split.Length >= 2)
+                            FILE_FORMAT = value.ToUpperInvariant();
+                        }
+                        else if (key.Contains("UDAS_END"))
+                        {
+                            UDAS_END = value;
+                        }
+                        else if (key.Contains("UDAS_SOUNDFLAG"))
+                        {
+                            int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out UDAS_SOUNDFLAG);
+                        }
+                        else if (key.Contains("DAT_AMOUNT"))
+                        {
+                            uint.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out DAT_AMOUNT);
+                        }
+                        else if (key.StartsWith("DAT_"))
+                        {
+                            if (!DatFiles.ContainsKey(key))
                             {
-                                string key = split[0].ToUpperInvariant().Trim();
-                                if (!pair.ContainsKey(key))
-                                {
-                                    pair.Add(key, split[1].Trim());
-                                }
+                                DatFiles.Add(key, value);
                             }
                         }
                     }
-
-                }
-
-                idxj.Close();
-
-
-                if (pair.ContainsKey("FILE_FORMAT") && pair.ContainsKey("DAT_AMOUNT"))
-                {
-                    string FileFormat = pair["FILE_FORMAT"].ToUpperInvariant().Trim();
-
-                    if (FileFormat == "UDAS" || FileFormat == "DAT")
-                    {
-                        bool isUdas = false;
-                        int SoundFlag = -1;
-                        bool asSoundFlag = false;
-
-                        int datAmount = 0;
-                        try
-                        {
-                            datAmount = int.Parse(pair["DAT_AMOUNT"].Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine("DAT_AMOUNT convert error: " + ex);
-                            return;
-                        }
-
-                        if (FileFormat == "UDAS" && pair.ContainsKey("UDAS_SOUNDFLAG"))
-                        {
-                            try
-                            {
-                                SoundFlag = int.Parse(pair["UDAS_SOUNDFLAG"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture);
-                                if (SoundFlag > 0xFF)
-                                {
-                                    SoundFlag = 0xFF;
-                                }
-                                asSoundFlag = true;
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine("UDAS_SOUNDFLAG convert error: " + ex);
-                                return;
-                            }
-                        }
-
-                        StreamWriter idx_ = null;
-
-                        try
-                        {
-                            string directory = info.DirectoryName;
-                            string baseName = Path.GetFileNameWithoutExtension(info.Name);
-                            string EndFileName = directory + "\\" + baseName + ".idx";
-                            FileInfo EndFileInfo = new FileInfo(EndFileName);
-                            idx_ = EndFileInfo.CreateText();
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine("Error: " + ex);
-                            return;
-                        }
-
-
-                        if (idx_ != null)
-                        {
-                            Line[] datGroup = new Line[datAmount];
-
-                            // get files
-                            for (int i = 0; i < datAmount; i++)
-                            {
-                                Line dat = new Line();
-                                dat.FileID = i;
-                                dat.FileName = "";
-                                dat.Extension = "";
-
-                                string key = "DAT_" + i.ToString("D3");
-                                if (pair.ContainsKey(key))
-                                {
-                                    dat.FileName = pair[key];
-                                    dat.Extension = Path.GetExtension(pair[key]);
-                                }
-
-                                datGroup[i] = dat;
-                            }
-
-                            Line Snd = new Line();
-                            Snd.FileID = -1;
-                            Snd.FileName = "";
-                            Snd.Extension = "";
-
-                            if (FileFormat == "UDAS")
-                            {
-                                isUdas = true;
-
-                                if (pair.ContainsKey("UDAS_END"))
-                                {
-                                    Snd.FileName = pair["UDAS_END"];
-                                    Snd.Extension = Path.GetExtension(pair["UDAS_END"]);
-                                }
-                            }
-
-                            //file
-                            int FileCount = datAmount;
-                            if (isUdas && asSoundFlag && SoundFlag > 0 && FileCount > 0)
-                            {
-                                FileCount += 1;
-                            }
-
-                            idx_.Write("FileCount = " + FileCount);
-                            if (isUdas)
-                            {
-                                idx_.Write(Environment.NewLine + "SoundFlag = " + SoundFlag);
-                            }
-                           
-                            for (int i = 0; i < datGroup.Length; i++)
-                            {
-                                idx_.Write(Environment.NewLine + "File_" + datGroup[i].FileID + " = " + datGroup[i].FileName);
-                            }
-
-                            if (isUdas && asSoundFlag && SoundFlag > 0 && FileCount > 0)
-                            {
-                                idx_.Write(Environment.NewLine + "File_" + (FileCount - 1) + " = " + Snd.FileName);
-                            }
-
-                            idx_.Close();
-                        }
-
-                    }
-                    else
-                    {
-                        Console.WriteLine("Invalid FILE_FORMAT: " + FileFormat);
-                        return;
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Not found FILE_FORMAT or DAT_AMOUNT tag.");
-                    return;
                 }
 
             }
 
+            idxj.Close();
+
+            if (FILE_FORMAT == null || !(FILE_FORMAT == "UDAS" || FILE_FORMAT == "DAT"))
+            {
+                Console.WriteLine("Invalid FILE_FORMAT!");
+                return;
+            }
+
+            if (DAT_AMOUNT == 0)
+            {
+                Console.WriteLine("DAT_AMOUNT cannot be 0!");
+                return;
+            }
+
+            StreamWriter idx_;
+
+            try
+            {
+                FileInfo endFileInfo = new FileInfo(Path.ChangeExtension(info.FullName, "idx"));
+                idx_ = endFileInfo.CreateText();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex);
+                return;
+            }
+
+            // continua só se idx_ != null
+
+            bool isUdas = false;
+
+            Line[] datGroup = new Line[DAT_AMOUNT];
+
+            // get files
+            for (int i = 0; i < DAT_AMOUNT; i++)
+            {
+                Line dat = new Line();
+                dat.FileID = i;
+                dat.FileName = "";
+                dat.Extension = "";
+
+                string key = "DAT_" + i.ToString("D3");
+                if (DatFiles.ContainsKey(key))
+                {
+                    dat.FileName = DatFiles[key];
+                    dat.Extension = Path.GetExtension(DatFiles[key]);
+                }
+
+                datGroup[i] = dat;
+            }
+
+            Line Snd = new Line();
+            Snd.FileID = -1;
+            Snd.FileName = "";
+            Snd.Extension = "";
+
+            if (FILE_FORMAT == "UDAS")
+            {
+                isUdas = true;
+
+                if (UDAS_END != null)
+                {
+                    Snd.FileName = UDAS_END;
+                    Snd.Extension = Path.GetExtension(UDAS_END);
+                }
+            }
+
+            //file
+            uint FileCount = DAT_AMOUNT;
+            if (isUdas && UDAS_SOUNDFLAG > 0 && FileCount > 0)
+            {
+                FileCount += 1;
+            }
+
+            idx_.Write("FileCount = " + FileCount);
+            Console.WriteLine("FileCount = " + FileCount);
+            if (isUdas)
+            {
+                idx_.Write(Environment.NewLine + "SoundFlag = " + UDAS_SOUNDFLAG);
+                Console.WriteLine("SoundFlag = " + UDAS_SOUNDFLAG);
+            }
+
+            for (int i = 0; i < datGroup.Length; i++)
+            {
+                string line = "File_" + datGroup[i].FileID + " = " + datGroup[i].FileName;
+                idx_.Write(Environment.NewLine + line);
+                Console.WriteLine(line);
+            }
+
+            if (isUdas && UDAS_SOUNDFLAG > 0 && FileCount > 0)
+            {
+                string line = "File_" + (FileCount - 1) + " = " + Snd.FileName;
+                idx_.Write(Environment.NewLine + line);
+                Console.WriteLine(line);
+            }
+
+            idx_.Close();
 
         }
 
@@ -407,7 +341,7 @@ namespace DATUDAS_IDX_TO_IDXJ
         {
             public int FileID { get; set; } = -1;
             public string FileName { get; set; } = "";
-            public string Extension { get; set; } = "NULL";
+            public string Extension { get; set; } = "";
         }
 
     }
